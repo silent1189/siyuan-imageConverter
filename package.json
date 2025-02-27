@@ -1,6 +1,6 @@
 {
   "name": "siyuan-imagetowebp",
-  "version": "0.0.3",
+  "version": "0.0.2",
   "type": "module",
   "description": "This is a sample plugin based on vite and svelte for Siyuan (https://b3log.org/siyuan)",
   "repository": "https://github.com/1189/siyuan-imageToWebp",
