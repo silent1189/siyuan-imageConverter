@@ -1,30 +1,33 @@
 import { Plugin, showMessage } from "siyuan";
 import * as api from "./api";
-import "@/index.scss";
 import imageCompression from "browser-image-compression";
 
 export default class PluginSample extends Plugin {
   private files: any[];
-  private Hpath: string = "";
-  private notebookId: string = "";
-  private pageId: string = "";
+  private Hpath: string;
+  private notebookId: string;
+  private pageId: string;
   private file: File;
   private blockId: string;
 
-  async onload() {
+  private clearValue(){
     this.Hpath = "";
     this.notebookId = "";
     this.pageId = "";
+  }
+
+  async onload() {
+    console.log("加载插件");
+    this.clearValue();
     this.eventBus.on("paste", this.eventBusPaste.bind(this));
     this.eventBus.on("switch-protyle", () => {
-      this.Hpath = "";
-      this.notebookId = "";
-      this.pageId = "";
+      this.clearValue();
     });
   }
 
   async onunload() {
-    console.log("onunload");
+    this.clearValue();
+    console.log("卸载插件");
   }
 
   private async eventBusPaste(event: any) {

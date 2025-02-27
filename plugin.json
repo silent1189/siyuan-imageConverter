@@ -1,24 +1,14 @@
 {
   "name": "siyuan-imageToWebp",
-  "author": "frostime",
-  "url": "https://github.com/silent1189/plugin-sample-vite",
+  "author": "c0nt1",
+  "url": "https://github.com/silent1189/siyuan-imageToWebp",
   "version": "0.0.3",
   "minAppVersion": "3.0.12",
   "backends": [
-    "windows",
-    "linux",
-    "darwin",
-    "ios",
-    "android",
-    "harmony",
-    "docker"
+    "windows"
   ],
   "frontends": [
-    "desktop",
-    "mobile",
-    "browser-desktop",
-    "browser-mobile",
-    "desktop-window"
+    "desktop"
   ],
   "displayName": {
     "en_US": "siyuan-imageToWebp",
@@ -29,8 +19,7 @@
     "zh_CN": "思源笔记-插入图片为Webp"
   },
   "readme": {
-    "en_US": "README.md",
-    "zh_CN": "README_zh_CN.md"
+    "en_US": "README.md"
   },
   "funding": {
     "custom": [
@@ -38,8 +27,7 @@
     ]
   },
   "keywords": [
-    "plugin",
-    "sample",
-    "插件样例"
+    "webp",
+    "图片压缩"
   ]
 }
