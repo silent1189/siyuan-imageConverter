@@ -1,4 +1,4 @@
-# **思源笔记插件-siyuan-Image-compression-paste**
+# **思源笔记插件-siyuan-imageToWebp**
 
 
 
