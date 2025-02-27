@@ -2,7 +2,7 @@
   "name": "siyuan-imageToWebp",
   "author": "frostime",
   "url": "https://github.com/silent1189/plugin-sample-vite",
-  "version": "0.3.6",
+  "version": "0.0.3",
   "minAppVersion": "3.0.12",
   "backends": [
     "windows",
