@@ -1,21 +1,20 @@
-import {
-  Plugin,
-  showMessage
-} from "siyuan";
+import { Plugin, showMessage } from "siyuan";
 import * as api from "./api";
 import "@/index.scss";
 import imageCompression from "browser-image-compression";
 
 export default class PluginSample extends Plugin {
   private files: any[];
-  private Hpath: string;
-  private notebookId: string;
-  private pageId: string;
+  private Hpath: string = "";
+  private notebookId: string = "";
+  private pageId: string = "";
   private file: File;
   private blockId: string;
 
   async onload() {
-    console.log("onload");
+    this.Hpath = "";
+    this.notebookId = "";
+    this.pageId = "";
     this.eventBus.on("paste", this.eventBusPaste.bind(this));
     this.eventBus.on("switch-protyle", () => {
       this.Hpath = "";
@@ -35,7 +34,7 @@ export default class PluginSample extends Plugin {
     this.files = event.detail.files;
     const protyle = event.detail.protyle;
     this.blockId = protyle.breadcrumb.id;
-    
+
     if (this.Hpath + this.notebookId + this.pageId === "") {
       this.notebookId = protyle.notebookId;
       this.pageId = protyle.block.rootID;
@@ -45,10 +44,10 @@ export default class PluginSample extends Plugin {
         (await this.getHpath(protyle.path));
     }
     if (this.files.length !== 1) {
-        event.detail.resolve({
-            textPlain: event.detail.textPlain.trim(),
-          });
-    }else{
+      event.detail.resolve({
+        textPlain: event.detail.textPlain.trim(),
+      });
+    } else {
       this.ImageToWebp(this.files);
     }
   }
@@ -63,18 +62,21 @@ export default class PluginSample extends Plugin {
       // 压缩图片
       const result = await this.compressImage(this.file);
       this.file = result.file;
-      
+
       if (result.ratio > 0) {
-          const originalSize = (this.file.size / 1024 / 1024).toFixed(2);
-          const compressedSize = (result.file.size / 1024 / 1024).toFixed(2);
-          showMessage(`图片压缩完成：
+        const originalSize = (this.file.size / 1024 / 1024).toFixed(2);
+        const compressedSize = (result.file.size / 1024 / 1024).toFixed(2);
+        showMessage(
+          `图片压缩完成：
               原始大小：${originalSize}MB
               压缩大小：${compressedSize}MB
-              压缩率：${result.ratio}%`, 
-              3000
-          );
+              压缩率：${result.ratio}%`,
+          3000
+        );
       }
-      const imagePath = (await api.upload(this.Hpath,[this.file])).succMap[this.file.name];
+      const imagePath = (await api.upload(this.Hpath, [this.file])).succMap[
+        this.file.name
+      ];
       const insertImage = await api.updateBlock(
         "markdown",
         `![image](${imagePath})`,
@@ -84,41 +86,43 @@ export default class PluginSample extends Plugin {
     }
   }
 
-  async compressImage(file: File): Promise<{file: File, ratio: number}> {
+  async compressImage(file: File): Promise<{ file: File; ratio: number }> {
     const options = {
-        maxSizeMB: 1,             // 最大文件大小
-        maxWidthOrHeight: 1920,    // 最大宽度或高度
-        useWebWorker: true,        // 使用 Web Worker 提高性能
-        fileType: 'image/webp'     // 输出格式为 webp
+      maxSizeMB: 1, // 最大文件大小
+      maxWidthOrHeight: 1920, // 最大宽度或高度
+      useWebWorker: true, // 使用 Web Worker 提高性能
+      fileType: "image/webp", // 输出格式为 webp
     };
 
     try {
-        const compressedFile = await imageCompression(file, options);
-        const ratio = Math.round((1 - compressedFile.size / file.size) * 100);
-        
-        // 保持原文件名，但改为.webp后缀
-        const newFileName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
-        const finalFile = new File([compressedFile], newFileName, { type: 'image/webp' });
-        
-        return {
-            file: finalFile,
-            ratio: ratio
-        };
+      const compressedFile = await imageCompression(file, options);
+      const ratio = Math.round((1 - compressedFile.size / file.size) * 100);
+
+      // 保持原文件名，但改为.webp后缀
+      const newFileName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
+      const finalFile = new File([compressedFile], newFileName, {
+        type: "image/webp",
+      });
+
+      return {
+        file: finalFile,
+        ratio: ratio,
+      };
     } catch (error) {
-        console.error('压缩失败:', error);
-        return {
-            file: file,
-            ratio: 0
-        };
+      console.error("压缩失败:", error);
+      return {
+        file: file,
+        ratio: 0,
+      };
     }
-}
+  }
 
   private async getNotebookConf(): Promise<string> {
     const conf = await api.getNotebookConf(this.notebookId);
     return conf?.name;
   }
 
-  private async pathToFile(imagePath: string){
+  private async pathToFile(imagePath: string) {
     const assesImage = ["jpg", "jpeg", "png", "gif", "webp"];
     if (assesImage.includes(imagePath.split(".")[1])) {
     } else {
