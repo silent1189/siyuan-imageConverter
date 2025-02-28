@@ -1,5 +1,6 @@
 import { Plugin, showMessage } from "siyuan";
 import * as api from "./api";
+import { SettingUtils } from "./libs/setting-utils";
 import imageCompression from "browser-image-compression";
 
 export default class PluginSample extends Plugin {
@@ -7,8 +8,14 @@ export default class PluginSample extends Plugin {
   private Hpath: string;
   private notebookId: string;
   private pageId: string;
-  private file: File;
   private blockId: string;
+  private imageSuffix: string;
+  private settingUtils: SettingUtils;
+  private options = {
+    1: "webp",
+    2: "avif"
+  };
+  
 
   private clearValue(){
     this.Hpath = "";
@@ -23,12 +30,40 @@ export default class PluginSample extends Plugin {
     this.eventBus.on("switch-protyle", () => {
       this.clearValue();
     });
+    this.showsetting();
   }
 
   async onunload() {
     this.clearValue();
     console.log("卸载插件");
   }
+
+  private async showsetting(){
+    const STORAGE_NAME = "config";
+    this.settingUtils = new SettingUtils({
+      plugin: this, name: STORAGE_NAME
+  });
+    this.settingUtils.addItem({
+      key: "Select",
+      value: 1,
+      type: "select",
+      title: "选择格式",
+      description: "压缩后的图片将以选择的格式保存",
+      options: this.options,
+      action: {
+        callback: async () => {
+            let value = await this.settingUtils.takeAndSave("Select");
+            this.imageSuffix = this.options[value];
+        }
+    }
+  });
+  try {
+    let value = await this.settingUtils.load();
+    this.imageSuffix = this.options[value["Select"]]||"webp";
+  } catch (e) {
+    console.error(e);
+  }
+}
 
   private async eventBusPaste(event: any) {
     // 如果需异步处理请调用 preventDefault， 否则会进行默认处理
@@ -61,24 +96,25 @@ export default class PluginSample extends Plugin {
   }
 
   private async ImageToWebp(files: any[]) {
-    if (this.checkImage(files[0])) {
+    var file = files[0];
+    if (this.checkImage(file)) {
+      if (typeof file === "string") {
+        file = await this.pathToFile(file);
+      }
       // 压缩图片
-      const result = await this.compressImage(this.file);
-      this.file = result.file;
-
+      const result = await this.compressImage(file);
+      const newfile = result.file;
       if (result.ratio > 0) {
-        const originalSize = (this.file.size / 1024 / 1024).toFixed(2);
-        const compressedSize = (result.file.size / 1024 / 1024).toFixed(2);
+        const originalSize = (file.size / 1024 / 1024).toFixed(2);
+        const compressedSize = (newfile.size / 1024 / 1024).toFixed(2);
         showMessage(
-          `图片压缩完成：
-              原始大小：${originalSize}MB
-              压缩大小：${compressedSize}MB
-              压缩率：${result.ratio}%`,
+          `${originalSize}MB->
+           ${compressedSize}MB ${result.ratio}%`,
           3000
         );
       }
-      const imagePath = (await api.upload(this.Hpath, [this.file])).succMap[
-        this.file.name
+      const imagePath = (await api.upload(this.Hpath, [newfile])).succMap[
+        newfile.name
       ];
       const insertImage = await api.updateBlock(
         "markdown",
@@ -91,10 +127,10 @@ export default class PluginSample extends Plugin {
 
   async compressImage(file: File): Promise<{ file: File; ratio: number }> {
     const options = {
-      maxSizeMB: 1, // 最大文件大小
+      maxSizeMB: 0.75, // 最大文件大小
       maxWidthOrHeight: 1920, // 最大宽度或高度
       useWebWorker: true, // 使用 Web Worker 提高性能
-      fileType: "image/webp", // 输出格式为 webp
+      fileType: "image/" + this.imageSuffix, // 输出格式为 webp
     };
 
     try {
@@ -102,9 +138,9 @@ export default class PluginSample extends Plugin {
       const ratio = Math.round((1 - compressedFile.size / file.size) * 100);
 
       // 保持原文件名，但改为.webp后缀
-      const newFileName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
+      const newFileName = file.name.replace(/\.[^/.]+$/, "") + "." + this.imageSuffix;
       const finalFile = new File([compressedFile], newFileName, {
-        type: "image/webp",
+        type: "image/" + this.imageSuffix,
       });
 
       return {
@@ -125,10 +161,7 @@ export default class PluginSample extends Plugin {
     return conf?.name;
   }
 
-  private async pathToFile(imagePath: string) {
-    const assesImage = ["jpg", "jpeg", "png", "gif", "webp"];
-    if (assesImage.includes(imagePath.split(".")[1])) {
-    } else {
+  private async pathToFile(imagePath: string): Promise<File> {
       const fs = require("fs").promises;
       const path = require("path");
       // 读取文件
@@ -145,24 +178,19 @@ export default class PluginSample extends Plugin {
         }[path.extname(imagePath).toLowerCase()] || "application/octet-stream";
 
       // 创建 File 对象
-      this.file = new File([buffer], fileName, { type: mimeType });
-    }
+      return new File([buffer], fileName, { type: mimeType });
   }
 
-  private async checkImage(files: any) {
+  private async checkImage(files: any): Promise<boolean> {
     const assesImage = ["jpg", "jpeg", "png", "gif", "webp"];
     if (typeof files === "string" && assesImage.includes(files.split(".")[1])) {
-      this.pathToFile(files);
-      console.log(this.file);
       return true;
     } else if (files instanceof File || files.type) {
       const type = files.type;
       if (type.indexOf("image") != -1) {
-        this.file = files;
         return true;
       }
       if (assesImage.includes(files.name.split(".")[1])) {
-        this.file = files;
         return true;
       }
     }
