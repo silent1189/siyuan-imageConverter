@@ -1,4 +1,4 @@
-import { Plugin, showMessage } from "siyuan";
+import { Plugin, showMessage, fetchSyncPost } from "siyuan";
 import * as api from "./api";
 import { SettingUtils } from "./libs/setting-utils";
 import imageCompression from "browser-image-compression";
@@ -54,10 +54,12 @@ export default class PluginSample extends Plugin {
         callback: async () => {
             let value = await this.settingUtils.takeAndSave("Select");
             this.imageSuffix = this.options[value];
+            console.log(this.imageSuffix);
         }
     }
   });
   try {
+    //加载之前的设置
     let value = await this.settingUtils.load();
     this.imageSuffix = this.options[value["Select"]]||"webp";
   } catch (e) {
@@ -86,7 +88,7 @@ export default class PluginSample extends Plugin {
         textPlain: event.detail.textPlain.trim(),
       });
     } else {
-      this.ImageToWebp(this.files);
+      this.ImageProcessing(this.files);
     }
   }
 
@@ -95,7 +97,7 @@ export default class PluginSample extends Plugin {
     return response;
   }
 
-  private async ImageToWebp(files: any[]) {
+  private async ImageProcessing(files: any[]) {
     var file = files[0];
     if (this.checkImage(file)) {
       if (typeof file === "string") {
@@ -116,11 +118,22 @@ export default class PluginSample extends Plugin {
       const imagePath = (await api.upload(this.Hpath, [newfile])).succMap[
         newfile.name
       ];
-      const insertImage = await api.updateBlock(
-        "markdown",
-        `![image](${imagePath})`,
-        this.blockId
-      );
+      let response = await api.getBlockByID(this.blockId);
+      if (response.markdown) {
+        console.log(this.blockId);
+        await api.updateBlock(
+          "markdown",
+          `${response.markdown}![image](${imagePath})`,
+          this.blockId
+        );
+      } else {
+        console.log(this.blockId);
+        await api.updateBlock(
+          "markdown",
+          `![image](${imagePath})`,
+          this.blockId
+        );
+      }
       return;
     }
   }
