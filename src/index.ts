@@ -1,4 +1,4 @@
-import { Plugin, showMessage, fetchSyncPost } from "siyuan";
+import { Plugin, showMessage } from "siyuan";
 import * as api from "./api";
 import { SettingUtils } from "./libs/setting-utils";
 import imageCompression from "browser-image-compression";
@@ -119,20 +119,34 @@ export default class PluginSample extends Plugin {
         newfile.name
       ];
       let response = await api.getBlockByID(this.blockId);
+      const markdownImageRegex = /\n?!\[.*?\]\(.*?\)\n?/g;
+      let newMarkdown;
       if (response.markdown) {
-        console.log(this.blockId);
-        await api.updateBlock(
-          "markdown",
-          `${response.markdown}![image](${imagePath})`,
-          this.blockId
-        );
-      } else {
-        console.log(this.blockId);
-        await api.updateBlock(
-          "markdown",
-          `![image](${imagePath})`,
-          this.blockId
-        );
+        if (markdownImageRegex.test(response.markdown)) {
+          console.log("find image in md");
+          newMarkdown = response.markdown.replace(markdownImageRegex, "-d25=测试文本-d25=");
+          newMarkdown = newMarkdown.replace("-d25=测试文本-d25=", `![image](${imagePath})`);
+          await api.updateBlock(
+            "markdown",
+            newMarkdown,
+            this.blockId
+          );
+        }else{
+          console.log("not find image in md");
+          newMarkdown = `${response.markdown}\n![image](${imagePath})`;
+          await api.updateBlock(
+            "markdown",
+            newMarkdown,
+            this.blockId
+          );
+        }
+      }else{
+        console.log(imagePath);
+          await api.updateBlock(
+            "markdown",
+            `![image](${imagePath})`,
+            this.blockId
+          );
       }
       return;
     }
