@@ -1,4 +1,4 @@
-import { Plugin, showMessage } from "siyuan";
+import { Plugin, showMessage, fetchSyncPost } from "siyuan";
 import * as api from "./api";
 import { SettingUtils } from "./libs/setting-utils";
 import imageCompression from "browser-image-compression";
@@ -119,21 +119,24 @@ export default class PluginSample extends Plugin {
         newfile.name
       ];
       let response = await api.getBlockByID(this.blockId);
-      const markdownImageRegex = /\n?!\[.*?\]\(.*?\)\n?/g;
+      //console.log(response.markdown);
+      const markdownImageRegex = /!\[.*?\]\(.*?\)/g;
+      //const markdownImageRegex = /\n?!\[.*?\]\(.*?\)\n?/g;
+      //存储修改后的markdown内容
       let newMarkdown;
       if (response.markdown) {
         if (markdownImageRegex.test(response.markdown)) {
-          console.log("find image in md");
           newMarkdown = response.markdown.replace(markdownImageRegex, "-d25=测试文本-d25=");
-          newMarkdown = newMarkdown.replace("-d25=测试文本-d25=", `![image](${imagePath})`);
+          newMarkdown = newMarkdown.replace("-d25=测试文本-d25=", `![image](${imagePath})\n`);
+          //console.log("发现image的md"+newMarkdown);
           await api.updateBlock(
             "markdown",
             newMarkdown,
             this.blockId
           );
         }else{
-          console.log("not find image in md");
           newMarkdown = `${response.markdown}\n![image](${imagePath})`;
+          //console.log("没有发现image的md"+newMarkdown);
           await api.updateBlock(
             "markdown",
             newMarkdown,
@@ -141,12 +144,12 @@ export default class PluginSample extends Plugin {
           );
         }
       }else{
-        console.log(imagePath);
-          await api.updateBlock(
-            "markdown",
-            `![image](${imagePath})`,
-            this.blockId
-          );
+        //console.log(imagePath);
+        await api.updateBlock(
+          "markdown",
+          `![image](${imagePath})`,
+          this.blockId
+        );
       }
       return;
     }
