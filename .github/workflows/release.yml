@@ -52,11 +52,21 @@ jobs:
       - name: Build for production
         run: npm run build
 
-      - name: Release
-        uses: ncipollo/release-action@v1
+      - name: Package Release
+        run: |
+          mkdir -p release
+          cp -r dist/* release/
+          cp plugin.json release/
+          cp README*.md release/
+          cd release
+          zip -r ../package.zip *
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
         with:
-          allowUpdates: true
-          artifactErrorsFailBuild: true
-          artifacts: "package.zip"
-          token: ${{ secrets.GITHUB_TOKEN }}
+          files: package.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           prerelease: false
