@@ -63,15 +63,15 @@ export default class PluginSample extends Plugin {
       const result = [];
       this.findImageParentNodes(Childrens,result);
       for(let i = 0; i < result.length; i++) {
-        //console.log(result[i]);
         const Children = result[i];
         const id = Children.id;
         if(Children.children.length === 3) {
           const result = this.findImagePath(Children.children[1].Children)
           if(result !== "notFind"){
+          //const result = this.findImagePath(Children.children[1].Children);
           this.imageIdMap.push([id, [
             Children.children[0].Data,
-            this.findImagePath(Children.children[1].Children),
+            result,
             Children.children[2].Data,
           ]]);}else{
             continue;
@@ -81,13 +81,14 @@ export default class PluginSample extends Plugin {
           if(result !== "notFind"){
           this.imageIdMap.push([id, [
             "",
-            ,
+            result,
             "",
           ]]);}else{
             continue;
           }
         }
       }
+      console.log(this.imageIdMap);
   }
 
   private findImagePath(imagePath:string): string {
@@ -130,7 +131,6 @@ private findImageParentNodes(node: any, result: any[] = []) {
         if (this.imageIdMap.length === 0) {
           showMessage("当前页面中没有未转换图片");
         } else {
-          console.log(this.imageIdMap);
           showMessage(
             `imageConverter检测到页面中存在${this.imageIdMap.length}张未转换图片, 开始批量转换, 转换完成前请勿刷新或切换页面`
           );
@@ -209,7 +209,7 @@ private findImageParentNodes(node: any, result: any[] = []) {
     this.blockId = protyle.breadcrumb.id;
     this.notebookId = protyle.notebookId;
     const path = protyle.path;
-    if (event.detail.files.length === 1 && this.settingUtils.get("imageConverterStatus")) {
+    if (event.detail.files.length === 1) {
       if (this.Hpath = "1") {
         this.Hpath =
         "assets/" +
@@ -253,20 +253,22 @@ private findImageParentNodes(node: any, result: any[] = []) {
       if (typeof file === "string") {
         file = await this.pathToFile(file);
       }
+      let resultFile = file;
+      if(this.settingUtils.get("imageConverterStatus")){
       // 压缩图片
-      const result = await this.compressImage(file);
-      const newfile = result.file;
-      if (result.ratio > 0) {
+      const response = (await this.compressImage(file));
+      resultFile = response.file;
+      if (response.ratio > 0) {
         const originalSize = (file.size / 1024 / 1024).toFixed(2);
-        const compressedSize = (newfile.size / 1024 / 1024).toFixed(2);
+        const compressedSize = (resultFile.size / 1024 / 1024).toFixed(2);
         showMessage(
           `${originalSize}MB->
-           ${compressedSize}MB ${result.ratio}%`,
+           ${compressedSize}MB ${response.ratio}%`,
           3000
         );
-      }
-      const imagePath = (await api.upload(this.Hpath, [newfile])).succMap[
-        newfile.name
+      }}
+      const imagePath = (await api.upload(this.Hpath, [resultFile])).succMap[
+        resultFile.name
       ];
       let response = await api.getBlockByID(this.blockId);
       const markdownImageRegex = /!\[.*?\]\(.*?\)/g;
@@ -353,7 +355,13 @@ private findImageParentNodes(node: any, result: any[] = []) {
       }[path.extname(imagePath).toLowerCase()] || "application/octet-stream";
 
     // 创建 File 对象
-    return new File([buffer], fileName, { type: mimeType });
+    try{
+      const file = new File([buffer], fileName, { type: mimeType });
+      return file;
+    }catch(e){
+      showMessage(e.message);
+    }
+    return null;
   }
 
   private async checkImage(files: any): Promise<boolean> {
