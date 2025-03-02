@@ -56,32 +56,71 @@ export default class PluginSample extends Plugin {
   async uninstall() {
     this.clearValue();
     console.log("删除插件");
-    //this.settingUtils.plugin.removeData(STORAGE_NAME);
-    //this.removeData(STORAGE_NAME);
   }
 
   async getImageIdMap(path: string) {
-    const Childrens = (await api.getFile("data/" + this.notebookId + path))
-      .Children;
-    for (let i = 0; i < Childrens.length; i++) {
-      if (
-        Childrens[i].Children &&
-        Childrens[i].Children.length === 3 &&
-        !["webp", "avif"].includes(
-          Childrens[i].Children[1].Children[5].Data.split(".").pop()
-        )
-      ) {
-        this.imageIdMap.push([
-          Childrens[i].ID,
-          [
-            Childrens[i].Children[0].Data,
-            Childrens[i].Children[1].Children[5].Data,
-            Childrens[i].Children[2].Data,
-          ],
-        ]);
+    const Childrens = (await api.getFile("data/" + this.notebookId + path));
+      const result = [];
+      this.findImageParentNodes(Childrens,result);
+      for(let i = 0; i < result.length; i++) {
+        //console.log(result[i]);
+        const Children = result[i];
+        const id = Children.id;
+        if(Children.children.length === 3) {
+          const result = this.findImagePath(Children.children[1].Children)
+          if(result !== "notFind"){
+          this.imageIdMap.push([id, [
+            Children.children[0].Data,
+            this.findImagePath(Children.children[1].Children),
+            Children.children[2].Data,
+          ]]);}else{
+            continue;
+          }
+        }else if(Children.children.length === 1){
+          const result = this.findImagePath(Children.children[0].Children)
+          if(result !== "notFind"){
+          this.imageIdMap.push([id, [
+            "",
+            ,
+            "",
+          ]]);}else{
+            continue;
+          }
+        }
+      }
+  }
+
+  private findImagePath(imagePath:string): string {
+    for(let i = 0; i < imagePath.length; i++) {
+      const list = imagePath[i]?.Data;
+      if(typeof list === "string"&&
+        ["jpg", "jpeg", "png"].includes(list.split(".").pop())) {
+        return list;
       }
     }
+    return "notFind";
   }
+
+private findImageParentNodes(node: any, result: any[] = []) {
+  // 如果当前节点是段落节点，检查其是否包含图片
+  if (node.Type === "NodeParagraph") {
+      const hasImage = node.Children?.some(child => child.Type === "NodeImage");
+      if (hasImage) {
+          result.push({
+              id: node.ID,
+              properties: node.Properties,
+              children: node.Children
+          });
+      }
+  }
+  // 递归检查子节点
+  if (node.Children && Array.isArray(node.Children)) {
+      for (const child of node.Children) {
+          this.findImageParentNodes(child, result);
+      }
+  }
+  return result;
+}
 
   private async addClickTopBar() {
     this.addTopBar({
@@ -91,6 +130,7 @@ export default class PluginSample extends Plugin {
         if (this.imageIdMap.length === 0) {
           showMessage("当前页面中没有未转换图片");
         } else {
+          console.log(this.imageIdMap);
           showMessage(
             `imageConverter检测到页面中存在${this.imageIdMap.length}张未转换图片, 开始批量转换, 转换完成前请勿刷新或切换页面`
           );
@@ -317,15 +357,15 @@ export default class PluginSample extends Plugin {
   }
 
   private async checkImage(files: any): Promise<boolean> {
-    const assesImage = ["jpg", "jpeg", "png", "gif", "webp"];
-    if (typeof files === "string" && assesImage.includes(files.split(".")[1])) {
+    const assesImage = ["jpg", "jpeg", "png"];
+    if (typeof files === "string" && assesImage.includes(files.split(".").pop())) {
       return true;
     } else if (files instanceof File || files.type) {
       const type = files.type;
       if (type.indexOf("image") != -1) {
         return true;
       }
-      if (assesImage.includes(files.name.split(".")[1])) {
+      if (assesImage.includes(files.name.split(".").pop())) {
         return true;
       }
     }

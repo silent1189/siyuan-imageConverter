@@ -2,7 +2,7 @@
   "name": "siyuan-imageConverter",
   "author": "c0nt1",
   "url": "https://github.com/silent1189/siyuan-imageConverter",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "minAppVersion": "3.0.12",
   "backends": [
     "windows"
