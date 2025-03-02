@@ -3,6 +3,9 @@ import * as api from "./api";
 import { SettingUtils } from "./libs/setting-utils";
 import imageCompression from "browser-image-compression";
 
+
+const STORAGE_NAME = "config";
+
 export default class PluginSample extends Plugin {
   private file: File;
   private Hpath: string;
@@ -19,9 +22,9 @@ export default class PluginSample extends Plugin {
   private repoPath: string;
 
   private clearValue() {
-    this.Hpath = "";
-    this.notebookId = "";
-    this.pageId = "";
+    this.Hpath = "1";
+    this.notebookId = "1";
+    this.pageId = "1";
   }
 
   async onload() {
@@ -48,6 +51,13 @@ export default class PluginSample extends Plugin {
   async onunload() {
     this.clearValue();
     console.log("卸载插件");
+  }
+
+  async uninstall() {
+    this.clearValue();
+    console.log("删除插件");
+    //this.settingUtils.plugin.removeData(STORAGE_NAME);
+    //this.removeData(STORAGE_NAME);
   }
 
   async getImageIdMap(path: string) {
@@ -106,13 +116,29 @@ export default class PluginSample extends Plugin {
   }
 
   private async showsetting() {
-    const STORAGE_NAME = "config";
     this.settingUtils = new SettingUtils({
       plugin: this,
       name: STORAGE_NAME,
     });
     this.settingUtils.addItem({
-      key: "Select",
+      key: "imageConverterStatus",
+      value: true,
+      type: "checkbox",
+      title: "启用图片压缩",
+      description: "开启图片压缩功能,分类存放时插件必须保留功能,不会受到影响",
+      action: {
+        callback: async () => {
+          let value = await this.settingUtils.takeAndSave("imageConverterStatus");
+          if (value) {
+            showMessage("开启图片压缩功能");
+          } else {
+            showMessage("关闭图片压缩功能");
+          }
+        },
+      },
+    });
+    this.settingUtils.addItem({
+      key: "saveSuffix",
       value: 1,
       type: "select",
       title: "选择格式",
@@ -120,7 +146,7 @@ export default class PluginSample extends Plugin {
       options: this.options,
       action: {
         callback: async () => {
-          let value = await this.settingUtils.takeAndSave("Select");
+          let value = await this.settingUtils.takeAndSave("saveSuffix");
           this.imageSuffix = this.options[value];
         },
       },
@@ -141,12 +167,20 @@ export default class PluginSample extends Plugin {
     this.file = event.detail.files[0];
     const protyle = event.detail.protyle;
     this.blockId = protyle.breadcrumb.id;
-    if (event.detail.files.length !== 1) {
+    this.notebookId = protyle.notebookId;
+    const path = protyle.path;
+    if (event.detail.files.length === 1 && this.settingUtils.get("imageConverterStatus")) {
+      if (this.Hpath = "1") {
+        this.Hpath =
+        "assets/" +
+        (await this.getNotebookConf()) +
+        (await this.getHpath(path));
+      }
+      this.ImageProcessing(this.file);
+    } else {
       event.detail.resolve({
         textPlain: event.detail.textPlain.trim(),
       });
-    } else {
-      this.ImageProcessing(this.file);
     }
   }
 
@@ -199,7 +233,6 @@ export default class PluginSample extends Plugin {
       //const markdownImageRegex = /\n?!\[.*?\]\(.*?\)\n?/g;
       //存储修改后的markdown内容
       let newMarkdown;
-      console.log(newfile);
       if (response.markdown) {
         if (markdownImageRegex.test(response.markdown)) {
           newMarkdown = response.markdown.replace(

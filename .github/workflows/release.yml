@@ -20,37 +20,37 @@ jobs:
           node-version: 20
           registry-url: "https://registry.npmjs.org"
 
-        # Install pnpm
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        id: pnpm-install
+        # Install npm
+      - name: Install npm
+        uses: npm/action-setup@v4
+        id: npm-install
         with:
           version: 8
           run_install: false
 
-      # Get pnpm store directory
-      - name: Get pnpm store directory
-        id: pnpm-cache
+      # Get npm store directory
+      - name: Get npm store directory
+        id: npm-cache
         shell: bash
         run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+          echo "STORE_PATH=$(npm store path)" >> $GITHUB_OUTPUT
 
-      # Setup pnpm cache
-      - name: Setup pnpm cache
+      # Setup npm cache
+      - name: Setup npm cache
         uses: actions/cache@v3
         with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ${{ steps.npm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-npm-store-${{ hashFiles('**/npm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+            ${{ runner.os }}-npm-store-
 
       # Install dependencies
       - name: Install dependencies
-        run: pnpm install
+        run: npm install
 
       # Build for production, 这一步会生成一个 package.zip
       - name: Build for production
-        run: pnpm build
+        run: npm run build
 
       - name: Release
         uses: ncipollo/release-action@v1
