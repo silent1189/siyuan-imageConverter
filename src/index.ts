@@ -225,8 +225,14 @@ private findImageParentNodes(node: any, result: any[] = []) {
   }
 
   private async getHpath(path: string): Promise<string> {
-    const response = await api.getHPathByPath(this.notebookId, path);
-    return response;
+    const pathList = path.split("/");
+    let result = "";
+    for (let i = 1; i < pathList.length; i++) {
+      const id = pathList[i].replace(/\.sy$/g, ""); // 使用正则去除.sy后缀
+      const pageName = await this.getPageName(id);
+      result = result + "/" + pageName.replace(/[ |\?|<|>|:|\\|*|\|]/g,"_");
+    }
+    return result;
   }
 
   private async ImagesProcessing() {
