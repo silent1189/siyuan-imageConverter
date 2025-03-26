@@ -88,7 +88,7 @@ export default class PluginSample extends Plugin {
           }
         }
       }
-      console.log(this.imageIdMap);
+      //console.log(this.imageIdMap);
   }
 
   private findImagePath(imagePath:string): string {
