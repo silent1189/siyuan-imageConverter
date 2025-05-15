@@ -1,36 +1,26 @@
 {
-  "name": "plugin-sample-vite",
-  "author": "frostime",
-  "url": "https://github.com/frostime/plugin-sample-vite",
-  "version": "0.3.6",
+  "name": "siyuan-imageConverter",
+  "author": "c0nt1",
+  "url": "https://github.com/silent1189/siyuan-imageConverter",
+  "version": "1.0.0",
   "minAppVersion": "3.0.12",
   "backends": [
-    "windows",
-    "linux",
-    "darwin",
-    "ios",
-    "android",
-    "harmony",
-    "docker"
+    "windows"
   ],
   "frontends": [
-    "desktop",
-    "mobile",
-    "browser-desktop",
-    "browser-mobile",
-    "desktop-window"
+    "desktop"
   ],
   "displayName": {
-    "en_US": "Plugin sample with vite",
-    "zh_CN": "插件样例 vite 版"
+    "en_US": "siyuan-imageConverter",
+    "zh_CN": "思源笔记-插入图片压缩转换"
   },
   "description": {
-    "en_US": "SiYuan plugin sample with vite",
-    "zh_CN": "使用 vite 开发的思源插件样例"
+    "en_US": "siyuan-imageToWebp",
+    "zh_CN": "思源笔记-插入图片压缩转换"
   },
   "readme": {
     "en_US": "README.md",
-    "zh_CN": "README_zh_CN.md"
+    "zh_CN": "README.md"
   },
   "funding": {
     "custom": [
@@ -38,8 +28,8 @@
     ]
   },
   "keywords": [
-    "plugin",
-    "sample",
-    "插件样例"
+    "webp",
+    "图片压缩",
+    "图片格式转换"
   ]
 }
