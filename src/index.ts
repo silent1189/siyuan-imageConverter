@@ -9,11 +9,12 @@ import * as api from "./api";
 import "@/index.scss";
 import { SettingUtils } from "./libs/setting-utils";
 import imageCompression from 'browser-image-compression';
+import test from "node:test";
 
 const STORAGE_NAME = "config";
 
 export default class PluginSample extends Plugin {
-    private imageMap = []; // 新增图片映射表;
+    private imageMap; // 新增图片映射表;
     private filesList = []; // 新增文件列表;
     private currentRepoPath: string; // 新增当前仓库路径属性
     private imagesavepath: any; // 新增图片保存路径属性
@@ -31,15 +32,14 @@ export default class PluginSample extends Plugin {
 
     async onload() {
         console.log("插件加载成功");
+        this.imageMap = new Set();
         this.eventBus.on("switch-protyle", async (data) => {
             this.imageMap = [];
-            let pagepath = await this.GetPagePath(data.detail.protyle.block.rootID)
-            let notebookname = await this.GetNotebookName(data.detail.protyle.notebookId)
-            this.imagesavepath = (notebookname + pagepath).split("/");
-            for (let i = 0; i < this.imagesavepath.length; i++) {
-                this.imagesavepath[i] = this.sanitizePath(this.imagesavepath[i])
-            }
-            this.imagesavepath = "assets/" + this.imagesavepath.join("/")
+            await this.getImageSavePath(data.detail.protyle);
+        });
+        this.eventBus.on("click-editorcontent", async (data) => {
+            await this.getImageSavePath(data.detail.protyle);
+            console.log()
         });
         this.showsetting();
         this.addClickTopBar();
@@ -51,19 +51,19 @@ export default class PluginSample extends Plugin {
             title: "imageConverter一件转换图片",
             callback: async () => {
                 //console.log(this.imageMap)
-                this.GetImageBlock();
-                for (let i = 0; i < this.imageMap.length; i++) {
-                    const imageBlock = this.imageMap[i][1].outerHTML;
+                this.imageMap = await this.GetImageBlock();
+                this.imageMap = Array.from(this.imageMap);
+                console.log(this.imageMap)
+                // for (let i = 0; i < this.imageMap.length; i++) {
+                //     const imageBlock = this.imageMap[i][1].outerHTML;
 
-                    // // 新增提取函数和数据处理
-                    const match = String(imageBlock).match(/<img[^>]+src="([^"]+)"/);
+                //     // // 新增提取函数和数据处理
+                //     const match = String(imageBlock).match(/<img[^>]+src="([^"]+)"/);
 
-                    if (match) {
-                        this.imageMap[i][0] = match[1];
-                        //this.imageMap[i][1] = imageBlock;
-                        this.imageMap[i][2] = null;
-                    }
-                }
+                //     if (match) {
+                //         this.imageMap[i][0] = match[1];
+                //     }
+                // }
                 this.GetRepoPath()
                 if (this.imagesavepath === undefined) {
                     showMessage(`未检测到当前页面信息，请切换页面或重启思源再进行转换`)
@@ -78,7 +78,7 @@ export default class PluginSample extends Plugin {
 
                     this.imageMap = [];
                     this.filesList = [];
-                }else if(this.imageMap.length == 0){
+                } else if (this.imageMap.length == 0) {
                     showMessage(`未检测到当前页面存在未转换图片`)
                 }
 
@@ -86,24 +86,49 @@ export default class PluginSample extends Plugin {
         });
     }
 
+    public sumImageLength() {
+        var imageset = new Set();
+        this.imageMap.forEach((item) => {
+            imageset.add(item[0]);
+        });
+        return imageset.size;
+    }
+
     public async GetImageBlock() {
+        var li = new Set();
         // //解析提取图片块的dom元素
         const targetDivs = document.querySelectorAll('div[data-node-id][data-node-index][data-type]');
         targetDivs.forEach(div => {
+            //检查图片
             const images = div.querySelectorAll('img[src][data-src][alt]');
             images.forEach(img => {
+                //console.log(img.getAttribute("src"));
                 if (this.checkimage(img.getAttribute("src"))) {
-                    this.imageMap.push(["", div, null, div.getAttribute("data-node-id")])
+                    li.add([img.getAttribute("src"), div, null, div.getAttribute("data-node-id")])
                 }
             });
         })
+        return li;
     }
 
     public checkimage(imagename) {
+        const fs = require('fs');
         const filenames = imagename.split("/")
-        if (filenames.length == 2 && ["jpeg", "jpg", "png"].includes(filenames[1].split(".")[1])) {
-            //console.log(imagename)
-            return true;
+        //console.log(filenames[filenames.length-1].split(".")[1])
+
+        if (["jpeg", "jpg", "png"].includes(filenames[filenames.length - 1].split(".")[1]) &&
+            fs.existsSync(this.currentRepoPath + "/" + imagename)) {
+            console.log(this.imageConverterStatus);
+            switch (filenames.length) {
+                case 2:
+                    return true
+                default:
+                    if (this.imageConverterStatus) {
+                        return true
+                    } else {
+                        return false
+                    }
+            }
         } else {
             return false;
         }
@@ -119,6 +144,7 @@ export default class PluginSample extends Plugin {
     }
 
     public async SwapAllImages() {
+        //console.log(this.imageMap)
         for (let i = 0; i < this.imageMap.length; i++) {
             const file = await this.CompressImage(this.imageMap[i][0]);
             this.filesList.push(file)
@@ -127,11 +153,79 @@ export default class PluginSample extends Plugin {
         //console.log(this.imagesavepath + ".assets")
         const response = await api.upload(this.imagesavepath + ".assets", this.filesList)
         //console.log(response.succMap)
+        // const responseArray = Object.entries(response.succMap).map(([key, value]) => ({ key, value }));
+        // console.log(responseArray)
+        // //规范数组
         for (let i = 0; i < this.imageMap.length; i++) {
-            const key = this.getnewimagename(this.imageMap[i][0])
-            this.imageMap[i][2] = response.succMap[key]
-            this.SwapImageDom(this.imageMap[i])
+            //console.log(this.getnewimagename(this.imageMap[i][0]));
+            this.imageMap[i][2] = response.succMap[this.getnewimagename(this.imageMap[i][0])];
+            //console.log(responseArray[i]["key"] +"---"+this.imageMap[i][0])
+            //this.imageMap[i][2] = responseArray[i]["value"]
         }
+        //console.log(this.imageMap)
+        var ID;
+        var DOM: Document;
+        var resultPool = new Set();
+        //console.log(this.imageMap)
+        // //  
+        for (let i = 0; i < this.imageMap.length; i++) {
+            const [srcpath, dom, dstpath, id] = this.imageMap[i];
+            if (ID != id) {
+                DOM = dom
+            }
+            var images = DOM?.querySelectorAll('img[src][data-src][alt]');
+            images.forEach(img => {
+                if (!resultPool.has(img.getAttribute("src")) &&
+                    srcpath == img.getAttribute("src")) {
+                    img.setAttribute("src", dstpath)
+                    img.setAttribute("data-src", dstpath)
+                    console.log(img)
+                    resultPool.add(img.getAttribute("src"))
+                }
+            });
+            // await api.updateBlock("dom",DOM,ID)
+            // break;
+        }
+        // for (let i = 0; i < this.imageMap.length; i++) {
+        //     // const key = this.getnewimagename(this.imageMap[i][0])
+        //     // this.imageMap[i][2] = response.succMap[key]
+        //     if (this.imageMap[i][3] != id) {
+        //         //this.SwapImageDom(this.imageMap[i])
+        //         dom = this.imageMap[i][1]
+        //     }
+        //     var images = dom.querySelectorAll('img[src][data-src][alt]');
+        //     var index = 0;
+
+        //     for (let i = 0; i < this.imageMap.length; i++) {
+        //         var img = images[i]
+        //         //console.log(img.getAttribute("src"))
+        //         if (!resultPool.has(img.getAttribute("src")) && 
+        //             this.imageMap[i][0] === img.getAttribute("src")) {
+        //             //console.log(img)
+
+        //             img.setAttribute("src", this.imageMap[i][2])
+        //             img.setAttribute("data-src", this.imageMap[i][2])
+        //             //console.log(this.imageMap[i][3])
+        //             resultPool.add(img.getAttribute("src"))
+        //         }
+        //     }
+        // images.forEach(img => {
+        //     if (!resultPool.has(img.getAttribute("src"))) {
+        //         // img.setAttribute("src", response.succMap[key])
+        //         // img.setAttribute("data-src", response.succMap[key])
+        //         console.log(this.imageMap[index][3])
+        //         resultPool.add(img.getAttribute("src"))
+        //     }
+        //     index++
+        // });
+
+        //await this.SwapImageDom(this.imageMap[i])
+        //}
+        // var dom ;
+        // var id ;
+        // for (let i = 0; i < this.imageMap.length; i++) {
+
+        // }
     }
 
     public async SwapImage(filemap: any) {
@@ -152,7 +246,8 @@ export default class PluginSample extends Plugin {
     }
 
     public getnewimagename(srcimagename) {
-        let temp = srcimagename.split("/")[1]
+        let temp = srcimagename.split("/")
+        temp = temp[temp.length - 1]
         if (this.imageConverterStatus) {
             temp = temp.split(".")[0]
             return temp + "." + this.imageSuffix;
@@ -325,5 +420,16 @@ export default class PluginSample extends Plugin {
         } catch (e) {
             //console.error(e);
         }
+    }
+
+    public async getImageSavePath(protyle) {
+        this.GetRepoPath();
+        var pagepath = await this.GetPagePath(protyle.block.rootID)
+        var notebookname = await this.GetNotebookName(protyle.notebookId)
+        this.imagesavepath = (notebookname + pagepath).split("/");
+        for (let i = 0; i < this.imagesavepath.length; i++) {
+            this.imagesavepath[i] = this.sanitizePath(this.imagesavepath[i])
+        }
+        this.imagesavepath = "assets/" + this.imagesavepath.join("/")
     }
 }
