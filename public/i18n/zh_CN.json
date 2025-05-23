@@ -1,5 +1,9 @@
 {
+<<<<<<< HEAD
     "addTopBarIcon": "使用插件添加一个顶栏按钮",
+=======
+    "addTopBarIcon": "imageConverter一键转换图片",
+>>>>>>> 8156b2be9ffbf15472e7f2ef7d1dd1dba0b17be4
     "cancel": "取消",
     "save": "保存",
     "byeMenu": "再见，菜单！",
