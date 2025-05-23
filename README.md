@@ -2,7 +2,6 @@
 
 # 更新日志
 
-<<<<<<< HEAD
 ## v0.1.0
 
 ### 改变
@@ -18,23 +17,13 @@
 ### 优化
 
 - 优化图片插入时文档树路径与思源页面标题路径保存不一致的问题，如果标题中出现Windows文件命名规则中的非法字符，则替换为_
-=======
-## v0.0.8
-
-### 优化
-- 优化图片插入时文档树路径与思源页面标题路径保存不一致的问题，如果标题中出现Windows文件命名规则中的非法字符，则替换为`_`
->>>>>>> 8156b2be9ffbf15472e7f2ef7d1dd1dba0b17be4
 
 
 ## v0.0.7
 
 ### 优化
-<<<<<<< HEAD
 
 - 优化批量转换时部分图片无法定位的问题，需要注意的是图片的描述内容不要出现包含点的图片后缀，否则插件会识别图片错误
-=======
-- 优化批量转换时部分图片无法定位的问题，需要注意的是图片的描述内容不要出现包含点的图片后缀，否则插件会识别图片错误，如果点击按钮后无法转换图片，请切换页面或重新打开页面后尝试
->>>>>>> 8156b2be9ffbf15472e7f2ef7d1dd1dba0b17be4
 - 修复图片压缩功能开关，图片分类存放但不压缩
 
 **如果无法批量转换的情况，可以打开开发者工具插件图片路径是否正确，如果有其他情况可以带上截图提交issues!**
@@ -43,25 +32,16 @@
 ## v0.0.6
 
 ### 添加
-<<<<<<< HEAD
-
-=======
->>>>>>> 8156b2be9ffbf15472e7f2ef7d1dd1dba0b17be4
 - 添加图片压缩功能开关，可以自行选择压缩或不压缩
 
 
 ### 声明
-<<<<<<< HEAD
-
-=======
->>>>>>> 8156b2be9ffbf15472e7f2ef7d1dd1dba0b17be4
 - 图片分类存放是插件的初衷之一，不会为其添加开关设置，压缩功能可以自行选择
 
 
 ## v0.0.5
 
 ### 新功能
-<<<<<<< HEAD
 
 - 添加批量转换页面中图片的功能：需要注意的是刚插入多张图片时需要切换页面，让插件知道增加了什么图片，最后点击软件右上角的微笑图标进行批量转换
 
@@ -70,14 +50,6 @@
 - 对于上一个版本发现的问题还没有找到办法修复，详细理解问题：刚编写完内容时思源笔记还没有同步内容到后端，导致插件不知道刚才输入了什么，所以刚编写完内容时需要等待思源笔记完成索引创建后再粘贴单张图片
 
 > ![image](https://github.com/user-attachments/assets/3ba0435a-f559-438a-8621-922a3c75750b)
-=======
-- 添加批量转换页面中图片的功能：需要注意的是刚插入多张图片时需要切换页面，让插件知道增加了什么图片，最后点击软件右上角的微笑图标进行批量转换
-
-### 问题
-- 对于上一个版本发现的问题还没有找到办法修复，详细理解问题：刚编写完内容时思源笔记还没有同步内容到后端，导致插件不知道刚才输入了什么，所以刚编写完内容时需要等待思源笔记完成索引创建后再粘贴单张图片
-> 
-![image](https://github.com/user-attachments/assets/3ba0435a-f559-438a-8621-922a3c75750b)
->>>>>>> 8156b2be9ffbf15472e7f2ef7d1dd1dba0b17be4
 
 
 ## v0.0.4
@@ -146,7 +118,6 @@
 ## **参考**
 
 > [plugin-sample](https://github.com/siyuan-note/plugin-sample)
-<<<<<<< HEAD
 >
 > [plugin-sample-vite-svelte](https://github.com/siyuan-note/plugin-sample-vite-svelte)
 >
@@ -158,19 +129,6 @@
 >
 > [前端API](https://github.com/siyuan-note/petal/blob/main/siyuan.d.ts)
 >
-=======
-> 
-> [plugin-sample-vite-svelte](https://github.com/siyuan-note/plugin-sample-vite-svelte)
-> 
-> [plugin-sample-vite](https://github.com/frostime/plugin-sample-vite)
-> 
-> [插件开发 Quick Start](https://ld246.com/article/1723732790981)
-> 
-> [后端API](https://github.com/siyuan-note/siyuan/blob/master/API_zh_CN.md)
-> 
-> [前端API](https://github.com/siyuan-note/petal/blob/main/siyuan.d.ts)
-> 
->>>>>>> 8156b2be9ffbf15472e7f2ef7d1dd1dba0b17be4
 > [siyuan-steve-tools](https://github.com/loonghfut/siyuan-steve-tools)
 
 ## PS
