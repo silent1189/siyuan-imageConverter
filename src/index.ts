@@ -39,7 +39,6 @@ export default class PluginSample extends Plugin {
     });
     this.eventBus.on("click-editorcontent", async (data) => {
       await this.getImageSavePath(data.detail.protyle);
-      console.log()
     });
     this.showsetting();
     this.addClickTopBar();
@@ -118,7 +117,7 @@ export default class PluginSample extends Plugin {
 
     if (["jpeg", "jpg", "png"].includes(filenames[filenames.length - 1].split(".")[1]) &&
       fs.existsSync(this.currentRepoPath + "/" + imagename)) {
-      console.log(this.imageConverterStatus);
+      //console.log(this.imageConverterStatus);
       switch (filenames.length) {
         case 2:
           return true
