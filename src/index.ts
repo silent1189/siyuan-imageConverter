@@ -53,7 +53,7 @@ export default class PluginSample extends Plugin {
                 //console.log(this.imageMap)
                 this.imageMap = await this.GetImageBlock();
                 this.imageMap = Array.from(this.imageMap);
-                console.log(this.imageMap)
+                //console.log(this.imageMap)
                 // for (let i = 0; i < this.imageMap.length; i++) {
                 //     const imageBlock = this.imageMap[i][1].outerHTML;
 
@@ -179,7 +179,7 @@ export default class PluginSample extends Plugin {
                     srcpath == img.getAttribute("src")) {
                     img.setAttribute("src", dstpath)
                     img.setAttribute("data-src", dstpath)
-                    console.log(img)
+                    //console.log(img)
                     resultPool.add(img.getAttribute("src"))
                 }
             });
