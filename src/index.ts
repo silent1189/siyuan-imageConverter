@@ -381,7 +381,7 @@ export default class PluginSample extends Plugin {
       value: false,
       type: "checkbox",
       title: "启用图片压缩",
-      description: "开启图片压缩功能,分类存放时插件必须保留功能,不会受到影响",
+      description: "启用压缩后，图片会在转换时进行压缩，关闭则不进行压缩，图片分类功能不受影响",
       action: {
         callback: async () => {
           let value = await this.settingUtils.takeAndSave(
