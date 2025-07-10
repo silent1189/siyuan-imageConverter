@@ -9,18 +9,19 @@ import * as api from "./api";
 import "@/index.scss";
 import { SettingUtils } from "./libs/setting-utils";
 import imageCompression from 'browser-image-compression';
-import test from "node:test";
+import { it } from "node:test";
 
 const STORAGE_NAME = "config";
 
 export default class PluginSample extends Plugin {
   private imageMap; // 新增图片映射表;
-  private filesList = []; // 新增文件列表;
-  private currentRepoPath: string; // 新增当前仓库路径属性
+  private filesList = []; // 文件列表;
+  private currentRepoPath: string; // 当前仓库路径
   private imagesavepath: any; // 新增图片保存路径属性
   private settingUtils: SettingUtils;
   private imageSuffix = "webp"; // 新增图片后缀属性
-  private imageConverterStatus = false;
+  private imageConverterStatus = false; //是否压缩图片
+  private currentPageId: string; //当前页面id
 
   private options = {
     1: "webp",
@@ -33,8 +34,9 @@ export default class PluginSample extends Plugin {
   async onload() {
     console.log("插件加载成功");
     this.imageMap = new Set();
+    //获取仓库路径
+    this.GetRepoPath();
     this.eventBus.on("switch-protyle", async (data) => {
-      this.imageMap = [];
       await this.getImageSavePath(data.detail.protyle);
     });
     this.eventBus.on("click-editorcontent", async (data) => {
@@ -49,88 +51,66 @@ export default class PluginSample extends Plugin {
       icon: "iconEmoji",
       title: "imageConverter一件转换图片",
       callback: async () => {
-        //console.log(this.imageMap)
-        this.imageMap = await this.GetImageBlock();
-        this.imageMap = Array.from(this.imageMap);
-        //console.log(this.imageMap)
-        // for (let i = 0; i < this.imageMap.length; i++) {
-        //     const imageBlock = this.imageMap[i][1].outerHTML;
-
-        //     // // 新增提取函数和数据处理
-        //     const match = String(imageBlock).match(/<img[^>]+src="([^"]+)"/);
-
-        //     if (match) {
-        //         this.imageMap[i][0] = match[1];
-        //     }
-        // }
-        this.GetRepoPath()
-        if (this.imagesavepath === undefined) {
-          showMessage(`未检测到当前页面信息，请切换页面或重启思源再进行转换`)
-          return;
-        } else if (this.imageMap.length != 0) {
-          showMessage(`检测到当前页面存在${this.imageMap.length}张图片未转换，开始转换`)
-          //console.log(this.imageMap)
-
-          await this.SwapAllImages();
-
-          showMessage(`转换完成，共${this.imageMap.length}张图片`)
-
-          this.imageMap = [];
-          this.filesList = [];
-        } else if (this.imageMap.length == 0) {
-          showMessage(`未检测到当前页面存在未转换图片`)
+        this.imageMap = []
+        this.imageMap = await this.GetImageBlock(this.currentPageId);
+        if (this.imageConverterStatus) {
+          this.SwapAllImages();
+        } else {
+          this.swapAllImageSrc()
         }
 
       },
     });
   }
 
-  public sumImageLength() {
-    var imageset = new Set();
-    this.imageMap.forEach((item) => {
-      imageset.add(item[0]);
-    });
-    return imageset.size;
-  }
-
-  public async GetImageBlock() {
-    var li = new Set();
-    // //解析提取图片块的dom元素
-    const targetDivs = document.querySelectorAll('div[data-node-id][data-node-index][data-type]');
-    targetDivs.forEach(div => {
-      //检查图片
-      const images = div.querySelectorAll('img[src][data-src][alt]');
-      images.forEach(img => {
-        //console.log(img.getAttribute("src"));
-        if (this.checkimage(img.getAttribute("src"))) {
-          li.add([img.getAttribute("src"), div, null, div.getAttribute("data-node-id")])
+  public async GetImageBlock(blockid) {
+    var li = [];
+    const data = await api.sql(`SELECT * FROM spans where root_id='${blockid}'`);
+    // console.log(data);
+    data.forEach(item => {
+      // console.log(item["markdown"]);
+      var filePath = item["markdown"].match(/!\[.*?\]\((.*?)\)/)[1]
+      var filePathList = filePath.split("/")
+      //获取图片文件后缀
+      var filePathList = filePathList[filePathList.length - 1].split(".")
+      var fileSuffix = filePathList[1]
+      var fileName = filePathList[0]
+      //根据设置情况判断获取哪些图片
+      if (this.imageConverterStatus) {
+        if (this.addImageToMap(fileSuffix)) {
+          li.push({
+            "block_id": item["block_id"],
+            "markdown": item["markdown"],
+            "file": null,
+            "old_path": filePath,
+            "image_name": fileName,
+            "image_suffix": this.imageSuffix
+          })
         }
-      });
+      } else {
+        if (filePathList.length == 2) {
+          if (this.addImageToMap(fileSuffix)) {
+            li.push({
+              "block_id": item["block_id"],
+              "markdown": item["markdown"],
+              "file": null,
+              "old_path": filePath,
+              "image_name": fileName,
+              "image_suffix": fileSuffix
+            })
+          }
+        }
+      }
     })
+    // console.log(li);
     return li;
   }
 
-  public checkimage(imagename) {
-    const fs = require('fs');
-    const filenames = imagename.split("/")
-    //console.log(filenames[filenames.length-1].split(".")[1])
-
-    if (["jpeg", "jpg", "png"].includes(filenames[filenames.length - 1].split(".")[1]) &&
-      fs.existsSync(this.currentRepoPath + "/" + imagename)) {
-      //console.log(this.imageConverterStatus);
-      switch (filenames.length) {
-        case 2:
-          return true
-        default:
-          if (this.imageConverterStatus) {
-            return true
-          } else {
-            return false
-          }
-      }
-    } else {
-      return false;
+  public addImageToMap(suffix) {
+    if (suffix !== this.imageSuffix) {
+      return true
     }
+    return false
   }
 
   public sanitizePath(str: string): string {
@@ -142,160 +122,91 @@ export default class PluginSample extends Plugin {
       .replace(/[_.-]+$/, '');        // 去除结尾特殊符号
   }
 
+  public async swapAllImageSrc() {
+    //获取图片文件补充到map中
+    for (let index = 0; index < this.imageMap.length; index++) {
+      const element = this.imageMap[index];
+      showMessage("正在读取第" + (index + 1) + "张图片")
+      var file = await this.pathToFile(this.currentRepoPath + "/" + element["markdown"].match(/!\[.*?\]\((.*?)\)/)[1])
+      this.imageMap[index]["file"] = file
+    }
+    showMessage("图片读取完成")
+    //创建目录
+    await api.putFile("data/" + this.imagesavepath, true, null)
+    //移动图片并更新图片块
+    this.imageMap.forEach(async item => {
+      const newPath = this.imagesavepath + "/" + item.image_name + "." + item.image_suffix
+      var markdown = item.markdown
+      markdown = markdown.replace(item.old_path, newPath)
+      await api.updateBlock("markdown", markdown, item.block_id)
+      await api.request(
+        "/api/file/renameFile",
+        {
+          "path": "data/" + item.old_path,
+          "newPath": "data/"+newPath
+        }
+      )
+    })
+  }
+
   public async SwapAllImages() {
-    //console.log(this.imageMap)
-    for (let i = 0; i < this.imageMap.length; i++) {
-      const file = await this.CompressImage(this.imageMap[i][0]);
-      this.filesList.push(file)
-      this.imageMap[i][2] = file;
+    //获取图片文件补充到map中
+    for (let index = 0; index < this.imageMap.length; index++) {
+      const element = this.imageMap[index];
+      showMessage("正在读取第" + (index + 1) + "张图片")
+      var file = await this.pathToFile(this.currentRepoPath + "/" + element["markdown"].match(/!\[.*?\]\((.*?)\)/)[1])
+      this.imageMap[index]["file"] = file
     }
-    //console.log(this.imagesavepath + ".assets")
-    const response = await api.upload(this.imagesavepath + ".assets", this.filesList)
-    //console.log(response.succMap)
-    // const responseArray = Object.entries(response.succMap).map(([key, value]) => ({ key, value }));
-    // console.log(responseArray)
-    // //规范数组
-    for (let i = 0; i < this.imageMap.length; i++) {
-      //console.log(this.getnewimagename(this.imageMap[i][0]));
-      this.imageMap[i][2] = response.succMap[this.getnewimagename(this.imageMap[i][0])];
-      //console.log(responseArray[i]["key"] +"---"+this.imageMap[i][0])
-      //this.imageMap[i][2] = responseArray[i]["value"]
-    }
-    //console.log(this.imageMap)
-    var ID;
-    var DOM: Document;
-    var resultPool = new Set();
-    //console.log(this.imageMap)
-    // //  
-    for (let i = 0; i < this.imageMap.length; i++) {
-      const [srcpath, dom, dstpath, id] = this.imageMap[i];
-      if (ID != id) {
-        DOM = dom
-      }
-      var images = DOM?.querySelectorAll('img[src][data-src][alt]');
-      images.forEach(img => {
-        if (!resultPool.has(img.getAttribute("src")) &&
-          srcpath == img.getAttribute("src")) {
-          img.setAttribute("src", dstpath)
-          img.setAttribute("data-src", dstpath)
-          //console.log(img)
-          resultPool.add(img.getAttribute("src"))
-        }
-      });
-      // await api.updateBlock("dom",DOM,ID)
-      // break;
-    }
-    // for (let i = 0; i < this.imageMap.length; i++) {
-    //     // const key = this.getnewimagename(this.imageMap[i][0])
-    //     // this.imageMap[i][2] = response.succMap[key]
-    //     if (this.imageMap[i][3] != id) {
-    //         //this.SwapImageDom(this.imageMap[i])
-    //         dom = this.imageMap[i][1]
-    //     }
-    //     var images = dom.querySelectorAll('img[src][data-src][alt]');
-    //     var index = 0;
-
-    //     for (let i = 0; i < this.imageMap.length; i++) {
-    //         var img = images[i]
-    //         //console.log(img.getAttribute("src"))
-    //         if (!resultPool.has(img.getAttribute("src")) && 
-    //             this.imageMap[i][0] === img.getAttribute("src")) {
-    //             //console.log(img)
-
-    //             img.setAttribute("src", this.imageMap[i][2])
-    //             img.setAttribute("data-src", this.imageMap[i][2])
-    //             //console.log(this.imageMap[i][3])
-    //             resultPool.add(img.getAttribute("src"))
-    //         }
-    //     }
-    // images.forEach(img => {
-    //     if (!resultPool.has(img.getAttribute("src"))) {
-    //         // img.setAttribute("src", response.succMap[key])
-    //         // img.setAttribute("data-src", response.succMap[key])
-    //         console.log(this.imageMap[index][3])
-    //         resultPool.add(img.getAttribute("src"))
-    //     }
-    //     index++
-    // });
-
-    //await this.SwapImageDom(this.imageMap[i])
-    //}
-    // var dom ;
-    // var id ;
-    // for (let i = 0; i < this.imageMap.length; i++) {
-
-    // }
-  }
-
-  public async SwapImage(filemap: any) {
-    const [srcpath, html, file] = filemap;
-    //console.log(this.imagesavepath)
-    const response = await api.upload(this.imagesavepath + ".assets", [file])
-    //console.log(response.succMap)
-  }
-
-  public SwapImageDom(map) {//: Promise<IResdoOperations[]> {
-    const [srcpath, dom, newpath, id] = map;
-    const imgElements = dom.querySelectorAll('img[src][data-src]');
-
-    imgElements.forEach(img => {
-      img.src = newpath;
-      img.dataset.src = newpath;
-    });
-  }
-
-  public getnewimagename(srcimagename) {
-    let temp = srcimagename.split("/")
-    temp = temp[temp.length - 1]
+    showMessage("图片读取完成")
+    // console.log(this.imageMap)
     if (this.imageConverterStatus) {
-      temp = temp.split(".")[0]
-      return temp + "." + this.imageSuffix;
-    } else {
-      return temp;
+      //压缩图片
+      // 使用Promise.all并行处理
+      const compressPromises = this.imageMap.map(async (element, index) => {
+        showMessage(`正在压缩第${index + 1}张图片`);
+        const tempfile = await this.compressImage(element.file);
+        return { index, file: tempfile.file };
+      });
+
+      const results = await Promise.all(compressPromises);
+      results.forEach(({ index, file }) => {
+        this.imageMap[index].file = file;
+      });
+      // console.log(this.imageMap)
+      showMessage("图片压缩完成")
+    }
+    //上传到资源
+    var filesList = []
+    this.imageMap.forEach(item => {
+      filesList.push(item["file"])
+    })
+    var tmpFileList = (await api.upload(this.imagesavepath, filesList)).succMap
+
+    //更新imageMap
+    for (let index = 0; index < this.imageMap.length; index++) {
+      const element = this.imageMap[index];
+      var markdown = element.markdown;
+      console.log(element)
+      // console.log(element.old_path+"   "+element.image_name+"."+this.imageSuffix)
+      markdown = markdown.replace(element.old_path, tmpFileList[element.image_name + "." + this.imageSuffix])
+      this.imageMap[index].markdown = markdown
+      // console.log(markdown)
+    }
+    // console.log(this.imageMap)
+    //更新图片路径
+    for (let index = 0; index < this.imageMap.length; index++) {
+      const element = this.imageMap[index];
+      await api.updateBlock("markdown", element.markdown, element.block_id)
+      await api.removeFile("data/" + element.old_path)
     }
   }
 
-  public async CompressImage(imagepath: string) {
-    // 新增图片压缩函数
-    // 新增图片打开逻辑
-    const path = require('path');
-
-    try {
-      // 构建绝对路径
-      const absolutePath = path.join(
-        this.currentRepoPath,
-        imagepath
-      );
-      //console.log('绝对路径:', absolutePath);
-      let file = await this.pathToFile(absolutePath);
-      // 压缩图片
-      //console.log(this.imageConverterStatus)
-      if (this.imageConverterStatus) {
-        const response = await this.compressImage(file);
-
-        if (response.ratio > 0) {
-          const originalSize = (file.size / 1024 / 1024).toFixed(2);
-          const compressedSize = (response.file.size / 1024 / 1024).toFixed(2);
-          showMessage(
-            `${originalSize}MB->
-                   ${compressedSize}MB ${response.ratio}%`,
-            3000
-          );
-        }
-        return response.file;
-      } else {
-        const compressedFile = await imageCompression(file, {});
-        const finalFile = new File([compressedFile], file.name, {
-          type: file.type,
-          lastModified: Date.now()
-        });
-        return finalFile;
-      }
-      //console.log('图片 Buffer 读取成功: ', typeof imageBuffer);
-    } catch (error) {
-      console.error('打开图片失败:', error);
-    }
-  }
+  // public async SwapImage(filemap: any) {
+  //   const [srcpath, html, file] = filemap;
+  //   //console.log(this.imagesavepath)
+  //   const response = await api.upload(this.imagesavepath + ".assets", [file])
+  //   //console.log(response.succMap)
+  // }
 
   async compressImage(file: File): Promise<{ file: File; ratio: number }> {
 
@@ -345,6 +256,7 @@ export default class PluginSample extends Plugin {
         ".jpeg": "image/jpeg",
         ".png": "image/png",
         ".webp": "image/webp",
+        ".avif": "image/avif"
       }[path.extname(imagePath).toLowerCase()] || "application/octet-stream";
 
     // 创建 File 对象
@@ -421,14 +333,21 @@ export default class PluginSample extends Plugin {
     }
   }
 
+  //获取当前标签页id、笔记本id、保存路径
   public async getImageSavePath(protyle) {
-    this.GetRepoPath();
+    //获取当前页面id
+    this.currentPageId = protyle.block.rootID;
     var pagepath = await this.GetPagePath(protyle.block.rootID)
-    var notebookname = await this.GetNotebookName(protyle.notebookId)
+    // console.log("页面路径: "+pagepath);
+    //获取笔记本名字
+    var notebookname = await this.GetNotebookName(protyle.notebookId);
+    // console.log("笔记本名称: "+notebookname);
+    //拼接保存路径
     this.imagesavepath = (notebookname + pagepath).split("/");
     for (let i = 0; i < this.imagesavepath.length; i++) {
       this.imagesavepath[i] = this.sanitizePath(this.imagesavepath[i])
     }
+    //保存路径
     this.imagesavepath = "assets/" + this.imagesavepath.join("/")
   }
 }
